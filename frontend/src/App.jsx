@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -64,6 +65,9 @@ function App() {
       
       {/* OAuth callback route */}
       <Route path="/auth/callback" element={<AuthCallback />} />
+
+      {/* Privacy Policy - public route */}
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       
       {/* Protected routes */}
       <Route
