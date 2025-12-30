@@ -47,10 +47,17 @@ export const getUserPages = async (userAccessToken) => {
   const data = await graphRequest("/me/accounts", userAccessToken, {
     params: {
       fields:
-        "id,name,category,picture{url},access_token,fan_count,followers_count",
+        "id,name,category,picture{url},access_token,fan_count,followers_count,tasks",
       limit: 100,
     },
   });
+
+  // Log pages and their tasks for debugging
+  if (data.data) {
+    data.data.forEach(page => {
+      console.log(`Page: ${page.name}, Tasks: ${JSON.stringify(page.tasks || 'No tasks returned')}`);
+    });
+  }
 
   return data.data || [];
 };
