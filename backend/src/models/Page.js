@@ -48,6 +48,12 @@ const Page = sequelize.define('Page', {
   lastSyncedAt: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  // Source of the page (personal OAuth or Business Manager)
+  source: {
+    type: DataTypes.ENUM('personal', 'business_manager'),
+    defaultValue: 'personal',
+    allowNull: false
   }
 }, {
   tableName: 'pages',

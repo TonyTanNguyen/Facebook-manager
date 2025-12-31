@@ -22,6 +22,7 @@ import { pagesAPI, statsAPI } from '../services/api';
 import PagesManager from '../components/PagesManager';
 import CommentsFeed from '../components/CommentsFeed';
 import MessagesFeed from '../components/MessagesFeed';
+import BusinessManagerSettings from '../components/BusinessManagerSettings';
 
 // Notifications Popup Component
 const NotificationsPopup = ({ stats, onNavigate, onClose }) => {
@@ -292,6 +293,14 @@ const Dashboard = () => {
                 <p className="text-sm text-slate-400">
                   {stats.totalPages} pages connected, {stats.selectedPages} selected
                 </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <h4 className="font-medium text-white mb-3">Business Manager</h4>
+                <p className="text-sm text-slate-400 mb-4">
+                  Connect your Facebook Business Manager to access pages you manage through it.
+                </p>
+                <BusinessManagerSettings />
               </div>
 
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">

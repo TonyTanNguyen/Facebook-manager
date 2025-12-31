@@ -1,7 +1,7 @@
 import express from "express";
 import { authenticateToken } from "../middleware/auth.js";
 import { Page, User } from "../models/index.js";
-import { getUserPages } from "../services/facebook.js";
+import { getUserPages, getAllBusinessPages } from "../services/facebook.js";
 
 const router = express.Router();
 
@@ -32,30 +32,30 @@ router.get("/", authenticateToken, async (req, res) => {
 
 /**
  * @route   POST /api/pages/sync
- * @desc    Sync pages from Facebook and store in database
+ * @desc    Sync pages from Facebook (personal + Business Manager)
  * @access  Private
  */
 router.post("/sync", authenticateToken, async (req, res) => {
   try {
-    // Fetch pages from Facebook
-    const facebookPages = await getUserPages(req.user.accessToken);
+    const user = await User.findByPk(req.user.id);
+    const syncedPages = [];
+    const existingPageIds = new Set();
 
-    if (!facebookPages || facebookPages.length === 0) {
-      return res.json({
-        success: true,
-        data: [],
-        message: "No pages found on your Facebook account",
-      });
+    // 1. Fetch personal pages from Facebook OAuth
+    let personalPages = [];
+    try {
+      personalPages = await getUserPages(user.accessToken);
+      console.log(`Found ${personalPages.length} personal pages`);
+    } catch (error) {
+      console.error("Error fetching personal pages:", error.message);
     }
 
-    // Sync pages to database
-    const syncedPages = [];
-
-    for (const fbPage of facebookPages) {
+    // Sync personal pages
+    for (const fbPage of personalPages) {
       const [page, created] = await Page.findOrCreate({
         where: {
           facebookPageId: fbPage.id,
-          userId: req.user.id,
+          userId: user.id,
         },
         defaults: {
           name: fbPage.name,
@@ -64,28 +64,86 @@ router.post("/sync", authenticateToken, async (req, res) => {
           pageAccessToken: fbPage.access_token,
           isSelected: true,
           permissions: [],
+          source: "personal",
           lastSyncedAt: new Date(),
         },
       });
 
-      // Update existing page
       if (!created) {
         await page.update({
           name: fbPage.name,
           category: fbPage.category,
           picture: fbPage.picture?.data?.url,
           pageAccessToken: fbPage.access_token,
+          source: "personal",
           lastSyncedAt: new Date(),
         });
       }
 
       syncedPages.push(page);
+      existingPageIds.add(fbPage.id);
     }
+
+    // 2. Fetch Business Manager pages (if connected)
+    let bmPages = [];
+    if (user.businessManagerToken && user.businessManagerId) {
+      try {
+        bmPages = await getAllBusinessPages(
+          user.businessManagerId,
+          user.businessManagerToken
+        );
+        console.log(`Found ${bmPages.length} Business Manager pages`);
+      } catch (error) {
+        console.error("Error fetching Business Manager pages:", error.message);
+      }
+
+      // Sync Business Manager pages (skip if already synced from personal)
+      for (const fbPage of bmPages) {
+        // Skip if already synced from personal account
+        if (existingPageIds.has(fbPage.id)) {
+          console.log(`Skipping duplicate page: ${fbPage.name}`);
+          continue;
+        }
+
+        const [page, created] = await Page.findOrCreate({
+          where: {
+            facebookPageId: fbPage.id,
+            userId: user.id,
+          },
+          defaults: {
+            name: fbPage.name,
+            category: fbPage.category,
+            picture: fbPage.picture?.data?.url,
+            pageAccessToken: fbPage.access_token,
+            isSelected: true,
+            permissions: [],
+            source: "business_manager",
+            lastSyncedAt: new Date(),
+          },
+        });
+
+        if (!created) {
+          await page.update({
+            name: fbPage.name,
+            category: fbPage.category,
+            picture: fbPage.picture?.data?.url,
+            pageAccessToken: fbPage.access_token,
+            source: "business_manager",
+            lastSyncedAt: new Date(),
+          });
+        }
+
+        syncedPages.push(page);
+      }
+    }
+
+    const personalCount = personalPages.length;
+    const bmCount = bmPages.filter((p) => !existingPageIds.has(p.id)).length;
 
     res.json({
       success: true,
       data: syncedPages,
-      message: `Synced ${syncedPages.length} pages from Facebook`,
+      message: `Synced ${syncedPages.length} pages (${personalCount} personal, ${bmCount} from Business Manager)`,
     });
   } catch (error) {
     console.error("Sync pages error:", error);

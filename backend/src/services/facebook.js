@@ -335,6 +335,98 @@ export const markConversationRead = async (conversationId, pageAccessToken) => {
   });
 };
 
+// ==========================================
+// Business Manager Functions
+// ==========================================
+
+/**
+ * Validate a System User token by fetching user info
+ */
+export const validateSystemUserToken = async (systemUserToken) => {
+  const data = await graphRequest("/me", systemUserToken, {
+    params: {
+      fields: "id,name",
+    },
+  });
+  return data;
+};
+
+/**
+ * Get businesses accessible by the System User token
+ */
+export const getBusinesses = async (systemUserToken) => {
+  const data = await graphRequest("/me/businesses", systemUserToken, {
+    params: {
+      fields: "id,name,created_time",
+      limit: 100,
+    },
+  });
+  return data.data || [];
+};
+
+/**
+ * Get pages owned by a Business Manager
+ */
+export const getBusinessOwnedPages = async (businessId, systemUserToken) => {
+  const data = await graphRequest(`/${businessId}/owned_pages`, systemUserToken, {
+    params: {
+      fields: "id,name,category,picture{url},access_token,fan_count,followers_count",
+      limit: 100,
+    },
+  });
+
+  // Log pages for debugging
+  if (data.data) {
+    console.log(`Business Manager ${businessId} pages:`);
+    data.data.forEach(page => {
+      console.log(`  - ${page.name} (${page.id})`);
+    });
+  }
+
+  return data.data || [];
+};
+
+/**
+ * Get pages that the Business has client access to
+ */
+export const getBusinessClientPages = async (businessId, systemUserToken) => {
+  try {
+    const data = await graphRequest(`/${businessId}/client_pages`, systemUserToken, {
+      params: {
+        fields: "id,name,category,picture{url},access_token,fan_count,followers_count",
+        limit: 100,
+      },
+    });
+    return data.data || [];
+  } catch (error) {
+    // client_pages endpoint may not be available for all business types
+    console.log(`No client pages for business ${businessId}:`, error.message);
+    return [];
+  }
+};
+
+/**
+ * Get all pages from Business Manager (owned + client)
+ */
+export const getAllBusinessPages = async (businessId, systemUserToken) => {
+  const [ownedPages, clientPages] = await Promise.all([
+    getBusinessOwnedPages(businessId, systemUserToken),
+    getBusinessClientPages(businessId, systemUserToken),
+  ]);
+
+  // Combine and deduplicate by page ID
+  const allPages = [...ownedPages];
+  const existingIds = new Set(ownedPages.map(p => p.id));
+
+  for (const page of clientPages) {
+    if (!existingIds.has(page.id)) {
+      allPages.push(page);
+    }
+  }
+
+  return allPages;
+};
+
 export default {
   getUserPages,
   getPageDetails,
@@ -352,4 +444,10 @@ export default {
   getConversationMessages,
   sendMessage,
   markConversationRead,
+  // Business Manager functions
+  validateSystemUserToken,
+  getBusinesses,
+  getBusinessOwnedPages,
+  getBusinessClientPages,
+  getAllBusinessPages,
 };

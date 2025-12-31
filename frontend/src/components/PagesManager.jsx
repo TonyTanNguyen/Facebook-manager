@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Users,
   ExternalLink,
+  Building2,
+  User,
 } from 'lucide-react';
 import { pagesAPI } from '../services/api';
 
@@ -231,7 +233,24 @@ const PagesManager = ({ onPagesChange }) => {
 
                   {/* Page info */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-white truncate">{page.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-white truncate">{page.name}</h4>
+                      {/* Source badge */}
+                      <span
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${
+                          page.source === 'business_manager'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'bg-slate-600/50 text-slate-400'
+                        }`}
+                        title={page.source === 'business_manager' ? 'Business Manager' : 'Personal'}
+                      >
+                        {page.source === 'business_manager' ? (
+                          <Building2 className="w-3 h-3" />
+                        ) : (
+                          <User className="w-3 h-3" />
+                        )}
+                      </span>
+                    </div>
                     <p className="text-xs text-slate-400 truncate">
                       {page.category || 'Page'}
                     </p>

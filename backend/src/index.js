@@ -9,6 +9,7 @@ import pagesRoutes from "./routes/pages.js";
 import commentsRoutes from "./routes/comments.js";
 import messagesRoutes from "./routes/messages.js";
 import statsRoutes from "./routes/stats.js";
+import businessManagerRoutes from "./routes/businessManager.js";
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +64,7 @@ app.use("/api/pages", pagesRoutes);
 app.use("/api/comments", commentsRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/business-manager", businessManagerRoutes);
 
 // 404 handler
 app.use((req, res) => {

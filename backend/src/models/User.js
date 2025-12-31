@@ -50,6 +50,23 @@ const User = sequelize.define('User', {
   lastLoginAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  // Business Manager fields
+  businessManagerId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  businessManagerName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  businessManagerToken: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  businessManagerConnectedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'users',

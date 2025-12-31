@@ -181,10 +181,35 @@ export const statsAPI = {
   getQuickStats: () => fetchAPI("/stats/quick"),
 };
 
+// Business Manager API endpoints
+export const businessManagerAPI = {
+  // Get connected Business Manager
+  get: () => fetchAPI("/business-manager"),
+
+  // Connect Business Manager with System User token
+  connect: (systemUserToken) =>
+    fetchAPI("/business-manager/connect", {
+      method: "POST",
+      body: JSON.stringify({ systemUserToken }),
+    }),
+
+  // Disconnect Business Manager
+  disconnect: () =>
+    fetchAPI("/business-manager/disconnect", { method: "DELETE" }),
+
+  // Validate token
+  validate: () =>
+    fetchAPI("/business-manager/validate", { method: "POST" }),
+
+  // Get pages from Business Manager (preview)
+  getPages: () => fetchAPI("/business-manager/pages"),
+};
+
 export default {
   auth: authAPI,
   pages: pagesAPI,
   comments: commentsAPI,
   messages: messagesAPI,
   stats: statsAPI,
+  businessManager: businessManagerAPI,
 };
