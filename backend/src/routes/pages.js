@@ -37,9 +37,84 @@ router.get("/", authenticateToken, async (req, res) => {
  */
 router.post("/sync", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
+    const userId = req.user.id;
+    const isInternalAdmin = req.user.type === "internal";
     const syncedPages = [];
     const existingPageIds = new Set();
+
+    // For internal admin, use System User token from env
+    if (isInternalAdmin) {
+      const systemToken = process.env.SYSTEM_USER_TOKEN;
+      const businessId = process.env.BUSINESS_MANAGER_ID;
+
+      if (!systemToken || !businessId) {
+        return res.status(400).json({
+          success: false,
+          message: "SYSTEM_USER_TOKEN and BUSINESS_MANAGER_ID must be configured in environment variables",
+        });
+      }
+
+      // Fetch Business Manager pages using System User token
+      let bmPages = [];
+      try {
+        bmPages = await getAllBusinessPages(businessId, systemToken);
+        console.log(`Found ${bmPages.length} Business Manager pages`);
+      } catch (error) {
+        console.error("Error fetching Business Manager pages:", error.message);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch pages: " + error.message,
+        });
+      }
+
+      // Sync Business Manager pages
+      for (const fbPage of bmPages) {
+        const [page, created] = await Page.findOrCreate({
+          where: {
+            facebookPageId: fbPage.id,
+            userId: userId,
+          },
+          defaults: {
+            name: fbPage.name,
+            category: fbPage.category,
+            picture: fbPage.picture?.data?.url,
+            pageAccessToken: fbPage.access_token,
+            isSelected: true,
+            permissions: [],
+            source: "business_manager",
+            lastSyncedAt: new Date(),
+          },
+        });
+
+        if (!created) {
+          await page.update({
+            name: fbPage.name,
+            category: fbPage.category,
+            picture: fbPage.picture?.data?.url,
+            pageAccessToken: fbPage.access_token,
+            source: "business_manager",
+            lastSyncedAt: new Date(),
+          });
+        }
+
+        syncedPages.push(page);
+      }
+
+      return res.json({
+        success: true,
+        data: syncedPages,
+        message: `Synced ${syncedPages.length} pages from Business Manager`,
+      });
+    }
+
+    // For Facebook OAuth users (legacy flow)
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     // 1. Fetch personal pages from Facebook OAuth
     let personalPages = [];

@@ -1,28 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Facebook, Shield, Zap, Layout, MessageCircle, AlertCircle } from 'lucide-react';
+import { Lock, Shield, Zap, Layout, MessageCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
-  const { loginWithFacebook, clearError } = useAuth();
+  const { loginWithPassword, clearError, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     clearError();
-    
+
     // Check for error in URL params
     const error = searchParams.get('error');
     if (error) {
       const errorMessages = {
-        auth_failed: 'Facebook authentication failed. Please try again.',
+        auth_failed: 'Authentication failed. Please try again.',
         token_generation_failed: 'Failed to generate session. Please try again.',
         session_expired: 'Your session has expired. Please log in again.',
       };
       setErrorMessage(errorMessages[error] || 'An error occurred. Please try again.');
     }
   }, [searchParams, clearError]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!password.trim()) {
+      setErrorMessage('Please enter a password');
+      return;
+    }
+
+    const success = await loginWithPassword(password);
+    if (success) {
+      navigate('/');
+    } else {
+      setErrorMessage('Invalid password. Please try again.');
+    }
+  };
 
   const features = [
     {
@@ -155,23 +174,52 @@ const LoginPage = () => {
 
           {/* Login Card */}
           <div className="glass rounded-3xl p-8">
-            <button
-              onClick={loginWithFacebook}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-[#1877F2] hover:bg-[#166FE5] transition-all duration-200 text-white font-semibold text-lg shadow-lg shadow-[#1877F2]/30 hover:shadow-[#1877F2]/50 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Facebook className="w-6 h-6" />
-              Continue with Facebook
-            </button>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 transition-all duration-200 text-white font-semibold text-lg shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Sign In
+                  </>
+                )}
+              </button>
+            </form>
 
             <div className="mt-6 pt-6 border-t border-white/10">
               <p className="text-xs text-slate-500 text-center leading-relaxed">
-                By continuing, you agree to grant access to your Facebook pages. 
-                We only request permissions necessary for managing your page engagement.
+                Internal access only. Contact your administrator for access.
               </p>
             </div>
           </div>
 
-          {/* Permissions info */}
+          {/* Info */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -180,24 +228,24 @@ const LoginPage = () => {
           >
             <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
               <Shield className="w-4 h-4 text-brand-400" />
-              Permissions we'll request
+              What you can do
             </h4>
             <ul className="space-y-2 text-sm text-slate-400">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                View list of pages you manage
+                Manage all Business Portfolio pages
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                Read comments on your pages
+                View and reply to comments
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                Reply to and manage comments
+                Manage messages and inbox
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
-                Read user content on your pages
+                Monitor page analytics
               </li>
             </ul>
           </motion.div>

@@ -50,9 +50,32 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  // Login with Facebook
+  // Login with Facebook (legacy)
   const loginWithFacebook = () => {
     window.location.href = authAPI.getLoginUrl();
+  };
+
+  // Login with password (internal use)
+  const loginWithPassword = async (password) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await authAPI.login(password);
+      if (response.success && response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login failed:', err);
+      setError(err.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle OAuth callback token
@@ -106,6 +129,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     error,
     loginWithFacebook,
+    loginWithPassword,
     handleAuthCallback,
     logout,
     refreshToken,

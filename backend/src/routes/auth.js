@@ -1,9 +1,64 @@
 import express from "express";
 import passport from "passport";
+import jwt from "jsonwebtoken";
 import { generateToken, authenticateToken } from "../middleware/auth.js";
 import User from "../models/User.js";
 
 const router = express.Router();
+
+// @route   POST /api/auth/login
+// @desc    Password-based login for internal use
+// @access  Public
+router.post("/login", async (req, res) => {
+  try {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+      return res.status(500).json({
+        success: false,
+        message: "Admin password not configured",
+      });
+    }
+
+    if (!password || password !== adminPassword) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
+    }
+
+    // Generate JWT token for internal admin
+    const token = jwt.sign(
+      {
+        id: "internal-admin",
+        role: "admin",
+        type: "internal"
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: "internal-admin",
+          name: process.env.ADMIN_NAME || "Admin",
+          role: "admin",
+        },
+      },
+      message: "Login successful",
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
+  }
+});
 
 // @route   GET /api/auth/facebook
 // @desc    Initiate Facebook OAuth flow
@@ -57,6 +112,20 @@ router.get(
 // @access  Private
 router.get("/me", authenticateToken, async (req, res) => {
   try {
+    // Handle internal admin
+    if (req.user.type === "internal") {
+      return res.json({
+        success: true,
+        data: {
+          id: "internal-admin",
+          name: process.env.ADMIN_NAME || "Admin",
+          role: "admin",
+          type: "internal",
+        },
+      });
+    }
+
+    // Handle Facebook OAuth user
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ["accessToken", "refreshToken"] },
     });
@@ -169,8 +238,24 @@ router.get("/status", async (req, res) => {
     }
 
     // Verify token without throwing
-    const jwt = await import("jsonwebtoken");
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Handle internal admin token
+    if (decoded.type === "internal") {
+      return res.json({
+        success: true,
+        data: {
+          isAuthenticated: true,
+          user: {
+            id: "internal-admin",
+            name: process.env.ADMIN_NAME || "Admin",
+            role: "admin",
+          },
+        },
+      });
+    }
+
+    // Handle Facebook OAuth user
     const user = await User.findByPk(decoded.id);
 
     res.json({

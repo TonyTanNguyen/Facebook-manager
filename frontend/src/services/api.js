@@ -44,10 +44,17 @@ const fetchAPI = async (endpoint, options = {}) => {
 
 // Auth API endpoints
 export const authAPI = {
-  // Get Facebook OAuth URL
+  // Get Facebook OAuth URL (legacy)
   getLoginUrl: () => {
     return `${API_BASE_URL}/auth/facebook`;
   },
+
+  // Login with password (internal use)
+  login: (password) =>
+    fetchAPI("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 
   // Get current user info
   getMe: () => fetchAPI("/auth/me"),
