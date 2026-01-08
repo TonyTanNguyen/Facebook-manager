@@ -60,11 +60,21 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Helper to check if Facebook OAuth is configured
+const isFacebookOAuthConfigured = () => {
+  return !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET);
+};
+
 // @route   GET /api/auth/facebook
 // @desc    Initiate Facebook OAuth flow
 // @access  Public
-router.get(
-  "/facebook",
+router.get("/facebook", (req, res, next) => {
+  if (!isFacebookOAuthConfigured()) {
+    return res.status(503).json({
+      success: false,
+      message: "Facebook OAuth is not configured on this server",
+    });
+  }
   passport.authenticate("facebook", {
     scope: [
       "email",
@@ -74,21 +84,24 @@ router.get(
       "pages_manage_engagement",
       "pages_messaging",
     ],
-  })
-);
+  })(req, res, next);
+});
 
 // @route   GET /api/auth/facebook/callback
 // @desc    Facebook OAuth callback
 // @access  Public
-router.get(
-  "/facebook/callback",
+router.get("/facebook/callback", (req, res, next) => {
+  if (!isFacebookOAuthConfigured()) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    return res.redirect(`${frontendUrl}/login?error=oauth_not_configured`);
+  }
   passport.authenticate("facebook", {
     failureRedirect: `${
       process.env.FRONTEND_URL || "http://localhost:5173"
     }/login?error=auth_failed`,
     session: false,
-  }),
-  (req, res) => {
+  })(req, res, (err) => {
+    if (err) return next(err);
     try {
       // Generate JWT token for the authenticated user
       const token = generateToken(req.user);
@@ -104,8 +117,8 @@ router.get(
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       res.redirect(`${frontendUrl}/login?error=token_generation_failed`);
     }
-  }
-);
+  });
+});
 
 // @route   GET /api/auth/me
 // @desc    Get current authenticated user
