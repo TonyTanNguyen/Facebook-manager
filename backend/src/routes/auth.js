@@ -1,7 +1,7 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { generateToken, authenticateToken } from "../middleware/auth.js";
+import { generateToken, authenticateToken, INTERNAL_ADMIN_ID } from "../middleware/auth.js";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -31,7 +31,7 @@ router.post("/login", async (req, res) => {
     // Generate JWT token for internal admin
     const token = jwt.sign(
       {
-        id: "internal-admin",
+        id: INTERNAL_ADMIN_ID,
         role: "admin",
         type: "internal"
       },
@@ -44,7 +44,7 @@ router.post("/login", async (req, res) => {
       data: {
         token,
         user: {
-          id: "internal-admin",
+          id: INTERNAL_ADMIN_ID,
           name: process.env.ADMIN_NAME || "Admin",
           role: "admin",
         },
@@ -117,7 +117,7 @@ router.get("/me", authenticateToken, async (req, res) => {
       return res.json({
         success: true,
         data: {
-          id: "internal-admin",
+          id: INTERNAL_ADMIN_ID,
           name: process.env.ADMIN_NAME || "Admin",
           role: "admin",
           type: "internal",
@@ -247,7 +247,7 @@ router.get("/status", async (req, res) => {
         data: {
           isAuthenticated: true,
           user: {
-            id: "internal-admin",
+            id: INTERNAL_ADMIN_ID,
             name: process.env.ADMIN_NAME || "Admin",
             role: "admin",
           },

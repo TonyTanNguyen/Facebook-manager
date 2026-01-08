@@ -14,11 +14,8 @@ const Page = sequelize.define('Page', {
   },
   userId: {
     type: DataTypes.UUID,
-    allowNull: false,
-    references: {
-      model: User,
-      key: 'id'
-    }
+    allowNull: false
+    // Note: Foreign key removed to support internal admin user (00000000-0000-0000-0000-000000000000)
   },
   name: {
     type: DataTypes.STRING,
@@ -65,9 +62,9 @@ const Page = sequelize.define('Page', {
   ]
 });
 
-// Define associations
-User.hasMany(Page, { foreignKey: 'userId', as: 'pages' });
-Page.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+// Define associations (without foreign key constraints to support internal admin)
+User.hasMany(Page, { foreignKey: 'userId', as: 'pages', constraints: false });
+Page.belongsTo(User, { foreignKey: 'userId', as: 'user', constraints: false });
 
 export default Page;
 
