@@ -39,7 +39,9 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Find or create user
+        const email = profile.emails?.[0]?.value;
+
+        // First, try to find by facebookId
         let user = await User.findOne({ where: { facebookId: profile.id } });
 
         if (user) {
@@ -48,16 +50,41 @@ passport.use(
             accessToken,
             refreshToken: refreshToken || user.refreshToken,
             name: profile.displayName,
-            email: profile.emails?.[0]?.value || user.email,
+            email: email || user.email,
             profilePicture: profile.photos?.[0]?.value || user.profilePicture,
             tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           });
+        } else if (email) {
+          // Try to find by email (handles app change with different facebookId)
+          user = await User.findOne({ where: { email } });
+
+          if (user) {
+            // Update existing user with new facebookId and token
+            user = await user.update({
+              facebookId: profile.id,
+              accessToken,
+              refreshToken: refreshToken || user.refreshToken,
+              name: profile.displayName,
+              profilePicture: profile.photos?.[0]?.value || user.profilePicture,
+              tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            });
+          } else {
+            // Create new user
+            user = await User.create({
+              facebookId: profile.id,
+              name: profile.displayName,
+              email,
+              profilePicture: profile.photos?.[0]?.value,
+              accessToken,
+              refreshToken,
+              tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            });
+          }
         } else {
-          // Create new user
+          // No email, create new user without email
           user = await User.create({
             facebookId: profile.id,
             name: profile.displayName,
-            email: profile.emails?.[0]?.value,
             profilePicture: profile.photos?.[0]?.value,
             accessToken,
             refreshToken,

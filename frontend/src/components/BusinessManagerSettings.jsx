@@ -9,6 +9,8 @@ const BusinessManagerSettings = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [token, setToken] = useState('');
+  const [businessId, setBusinessId] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -37,12 +39,14 @@ const BusinessManagerSettings = () => {
     setIsConnecting(true);
 
     try {
-      const response = await businessManagerAPI.connect(token);
+      const response = await businessManagerAPI.connect(token, businessId, businessName);
 
       if (response.success) {
         setBusinessManager(response.data);
         setShowConnectModal(false);
         setToken('');
+        setBusinessId('');
+        setBusinessName('');
         setSuccess('Business Manager connected! Sync your pages to see them.');
         setTimeout(() => setSuccess(null), 5000);
       } else {
@@ -169,31 +173,22 @@ const BusinessManagerSettings = () => {
 
             {/* Instructions */}
             <div className="mb-4 p-3 bg-slate-700/50 rounded-lg">
-              <h4 className="text-sm font-medium text-white mb-2">How to get your System User Token:</h4>
+              <h4 className="text-sm font-medium text-white mb-2">How to connect:</h4>
               <ol className="text-sm text-slate-300 space-y-1 list-decimal list-inside">
                 <li>
                   Go to{' '}
                   <a
-                    href="https://business.facebook.com/settings/system-users"
+                    href="https://business.facebook.com/settings/business-info"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:underline inline-flex items-center gap-1"
                   >
-                    Business Settings <ExternalLink className="w-3 h-3" />
+                    Business Info <ExternalLink className="w-3 h-3" />
                   </a>
+                  {' '}to find your Business ID
                 </li>
-                <li>Navigate to Users → System Users</li>
-                <li>Select or create a System User</li>
-                <li>Click "Generate New Token"</li>
-                <li>Select your app and required permissions:
-                  <ul className="ml-4 mt-1 text-xs text-slate-400">
-                    <li>• pages_show_list</li>
-                    <li>• pages_read_engagement</li>
-                    <li>• pages_manage_engagement</li>
-                    <li>• pages_messaging</li>
-                  </ul>
-                </li>
-                <li>Copy the generated token</li>
+                <li>Go to Users → System Users</li>
+                <li>Generate a token with pages permissions</li>
               </ol>
             </div>
 
@@ -204,24 +199,55 @@ const BusinessManagerSettings = () => {
               </div>
             )}
 
-            <form onSubmit={handleConnect}>
-              <label className="block mb-2 text-sm text-slate-300">
-                System User Access Token
-              </label>
-              <textarea
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Paste your System User token here..."
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 text-sm h-24 resize-none focus:outline-none focus:border-blue-500"
-                required
-              />
+            <form onSubmit={handleConnect} className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm text-slate-300">
+                  Business Manager ID *
+                </label>
+                <input
+                  type="text"
+                  value={businessId}
+                  onChange={(e) => setBusinessId(e.target.value)}
+                  placeholder="e.g., 123456789012345"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
 
-              <div className="flex gap-3 mt-4">
+              <div>
+                <label className="block mb-2 text-sm text-slate-300">
+                  Business Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="e.g., My Company"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm text-slate-300">
+                  System User Access Token *
+                </label>
+                <textarea
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Paste your System User token here..."
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 text-sm h-20 resize-none focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowConnectModal(false);
                     setToken('');
+                    setBusinessId('');
+                    setBusinessName('');
                     setError(null);
                   }}
                   className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
@@ -230,7 +256,7 @@ const BusinessManagerSettings = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isConnecting || !token.trim()}
+                  disabled={isConnecting || !token.trim() || !businessId.trim()}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg transition-colors"
                 >
                   {isConnecting ? (

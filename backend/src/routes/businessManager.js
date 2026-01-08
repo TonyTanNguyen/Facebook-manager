@@ -50,7 +50,7 @@ router.get("/", authenticateToken, async (req, res) => {
  */
 router.post("/connect", authenticateToken, async (req, res) => {
   try {
-    const { systemUserToken } = req.body;
+    const { systemUserToken, businessId, businessName } = req.body;
 
     if (!systemUserToken) {
       return res.status(400).json({
@@ -59,10 +59,16 @@ router.post("/connect", authenticateToken, async (req, res) => {
       });
     }
 
+    if (!businessId) {
+      return res.status(400).json({
+        success: false,
+        message: "Business Manager ID is required",
+      });
+    }
+
     // Validate the token
-    let tokenInfo;
     try {
-      tokenInfo = await validateSystemUserToken(systemUserToken);
+      await validateSystemUserToken(systemUserToken);
     } catch (error) {
       return res.status(400).json({
         success: false,
@@ -70,32 +76,14 @@ router.post("/connect", authenticateToken, async (req, res) => {
       });
     }
 
-    // Get businesses accessible by this token
-    let businesses;
-    try {
-      businesses = await getBusinesses(systemUserToken);
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Could not fetch businesses: " + error.message,
-      });
-    }
-
-    if (!businesses || businesses.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No businesses found for this System User token",
-      });
-    }
-
-    // Use the first business (user has single BM)
-    const business = businesses[0];
+    // Use the provided business ID and name
+    const finalBusinessName = businessName || `Business ${businessId}`;
 
     // Update user with Business Manager info
     const user = await User.findByPk(req.user.id);
     await user.update({
-      businessManagerId: business.id,
-      businessManagerName: business.name,
+      businessManagerId: businessId,
+      businessManagerName: finalBusinessName,
       businessManagerToken: systemUserToken,
       businessManagerConnectedAt: new Date(),
     });
@@ -103,11 +91,11 @@ router.post("/connect", authenticateToken, async (req, res) => {
     res.json({
       success: true,
       data: {
-        businessId: business.id,
-        businessName: business.name,
+        businessId: businessId,
+        businessName: finalBusinessName,
         connectedAt: user.businessManagerConnectedAt,
       },
-      message: `Connected to Business Manager: ${business.name}`,
+      message: `Connected to Business Manager: ${finalBusinessName}`,
     });
   } catch (error) {
     console.error("Connect business manager error:", error);

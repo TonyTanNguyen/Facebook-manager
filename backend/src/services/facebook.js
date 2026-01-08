@@ -355,12 +355,31 @@ export const validateSystemUserToken = async (systemUserToken) => {
  * Get businesses accessible by the System User token
  */
 export const getBusinesses = async (systemUserToken) => {
+  // First try to get the System User's info which includes their business
+  try {
+    const meData = await graphRequest("/me", systemUserToken, {
+      params: {
+        fields: "id,name,business",
+      },
+    });
+    console.log("System User /me response:", JSON.stringify(meData, null, 2));
+
+    // If the System User has a business directly attached
+    if (meData.business) {
+      return [meData.business];
+    }
+  } catch (error) {
+    console.error("Error fetching /me:", error.message);
+  }
+
+  // Fallback to /me/businesses
   const data = await graphRequest("/me/businesses", systemUserToken, {
     params: {
       fields: "id,name,created_time",
       limit: 100,
     },
   });
+  console.log("System User /me/businesses response:", JSON.stringify(data, null, 2));
   return data.data || [];
 };
 

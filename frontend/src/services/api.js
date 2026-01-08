@@ -187,10 +187,10 @@ export const businessManagerAPI = {
   get: () => fetchAPI("/business-manager"),
 
   // Connect Business Manager with System User token
-  connect: (systemUserToken) =>
+  connect: (systemUserToken, businessId, businessName) =>
     fetchAPI("/business-manager/connect", {
       method: "POST",
-      body: JSON.stringify({ systemUserToken }),
+      body: JSON.stringify({ systemUserToken, businessId, businessName }),
     }),
 
   // Disconnect Business Manager
