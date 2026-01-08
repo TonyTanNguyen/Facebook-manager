@@ -309,6 +309,8 @@ const MessagesFeed = ({ selectedPageId }) => {
 
   useEffect(() => {
     loadConversations();
+    // Clear selected conversation when page changes
+    setSelectedConversation(null);
   }, [loadConversations]);
 
   const handleSendMessage = async (conversationId, message, pageId, recipientId) => {
