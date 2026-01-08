@@ -89,8 +89,9 @@ app.use((err, req, res, next) => {
 // Start server
 const startServer = async () => {
   try {
-    // Sync database (use { alter: true } in development for schema updates)
-    await syncDatabase({ alter: process.env.NODE_ENV === "development" });
+    // Sync database (alter: true adds missing columns without dropping data)
+    const shouldAlter = process.env.NODE_ENV === "development" || process.env.DB_ALTER === "true";
+    await syncDatabase({ alter: shouldAlter });
 
     app.listen(PORT, () => {
       console.log(`
