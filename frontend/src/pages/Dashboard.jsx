@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  MessageSquare,
   MessagesSquare,
-  Settings, 
-  LogOut, 
+  Settings,
+  LogOut,
   Menu,
   X,
   Bell,
@@ -15,14 +15,14 @@ import {
   Users,
   TrendingUp,
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { pagesAPI, statsAPI } from '../services/api';
 import PagesManager from '../components/PagesManager';
 import CommentsFeed from '../components/CommentsFeed';
 import MessagesFeed from '../components/MessagesFeed';
-import BusinessManagerSettings from '../components/BusinessManagerSettings';
 
 // Notifications Popup Component
 const NotificationsPopup = ({ stats, onNavigate, onClose }) => {
@@ -133,6 +133,17 @@ const NotificationsPopup = ({ stats, onNavigate, onClose }) => {
   );
 };
 
+// Helper to get default date range (last 7 days)
+const getDefaultDateRange = () => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 7);
+  return {
+    startDate: start.toISOString().split('T')[0],
+    endDate: end.toISOString().split('T')[0]
+  };
+};
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -140,6 +151,7 @@ const Dashboard = () => {
   const [pages, setPages] = useState([]);
   const [selectedPageFilter, setSelectedPageFilter] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dateRange, setDateRange] = useState(getDefaultDateRange);
   const [stats, setStats] = useState({
     totalPages: 0,
     selectedPages: 0,
@@ -236,8 +248,11 @@ const Dashboard = () => {
                   </option>
                 ))}
               </select>
+              <span className="text-sm text-slate-400">
+                {dateRange.startDate} to {dateRange.endDate}
+              </span>
             </div>
-            <CommentsFeed selectedPageId={selectedPageFilter} />
+            <CommentsFeed selectedPageId={selectedPageFilter} dateRange={dateRange} />
           </div>
         );
       case 'messages':
@@ -257,8 +272,11 @@ const Dashboard = () => {
                   </option>
                 ))}
               </select>
+              <span className="text-sm text-slate-400">
+                {dateRange.startDate} to {dateRange.endDate}
+              </span>
             </div>
-            <MessagesFeed selectedPageId={selectedPageFilter} />
+            <MessagesFeed selectedPageId={selectedPageFilter} dateRange={dateRange} />
           </div>
         );
       case 'pages':
@@ -296,11 +314,77 @@ const Dashboard = () => {
               </div>
 
               <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                <h4 className="font-medium text-white mb-3">Business Manager</h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-5 h-5 text-brand-400" />
+                  <h4 className="font-medium text-white">Date Range Filter</h4>
+                </div>
                 <p className="text-sm text-slate-400 mb-4">
-                  Connect your Facebook Business Manager to access pages you manage through it.
+                  Filter comments and messages by date range. Only content within this range will be loaded.
                 </p>
-                <BusinessManagerSettings />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={dateRange.startDate}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white focus:outline-none focus:border-brand-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={dateRange.endDate}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white focus:outline-none focus:border-brand-500/50"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date();
+                      start.setDate(start.getDate() - 7);
+                      setDateRange({
+                        startDate: start.toISOString().split('T')[0],
+                        endDate: end.toISOString().split('T')[0]
+                      });
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition-colors"
+                  >
+                    Last 7 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date();
+                      start.setDate(start.getDate() - 30);
+                      setDateRange({
+                        startDate: start.toISOString().split('T')[0],
+                        endDate: end.toISOString().split('T')[0]
+                      });
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition-colors"
+                  >
+                    Last 30 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date();
+                      start.setDate(start.getDate() - 90);
+                      setDateRange({
+                        startDate: start.toISOString().split('T')[0],
+                        endDate: end.toISOString().split('T')[0]
+                      });
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition-colors"
+                  >
+                    Last 90 days
+                  </button>
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">

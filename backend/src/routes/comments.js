@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { pageId, limit = 50 } = req.query;
+    const { pageId, limit = 50, startDate, endDate } = req.query;
 
     // Build query for pages
     const pageQuery = {
@@ -51,7 +51,23 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     // Fetch comments from Facebook (includes ad posts if Business Manager configured)
-    const comments = await getCommentsFromPages(pages, parseInt(limit), options);
+    let comments = await getCommentsFromPages(pages, parseInt(limit) * 2, options);
+
+    // Filter by date range if provided
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate + 'T23:59:59') : null; // Include full end day
+
+      comments = comments.filter(comment => {
+        const commentDate = new Date(comment.created_time);
+        if (start && commentDate < start) return false;
+        if (end && commentDate > end) return false;
+        return true;
+      });
+    }
+
+    // Apply limit after filtering
+    comments = comments.slice(0, parseInt(limit));
 
     res.json({
       success: true,

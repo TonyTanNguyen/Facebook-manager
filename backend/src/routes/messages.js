@@ -17,7 +17,7 @@ const router = express.Router();
  */
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { pageId, limit = 50 } = req.query;
+    const { pageId, limit = 50, startDate, endDate } = req.query;
 
     // Build query for pages
     const pageQuery = {
@@ -41,10 +41,26 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     // Fetch conversations from Facebook
-    const conversations = await getConversationsFromPages(
+    let conversations = await getConversationsFromPages(
       pages,
-      parseInt(limit)
+      parseInt(limit) * 2
     );
+
+    // Filter by date range if provided (based on updated_time)
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate + 'T23:59:59') : null;
+
+      conversations = conversations.filter(conv => {
+        const convDate = new Date(conv.updated_time);
+        if (start && convDate < start) return false;
+        if (end && convDate > end) return false;
+        return true;
+      });
+    }
+
+    // Apply limit after filtering
+    conversations = conversations.slice(0, parseInt(limit));
 
     res.json({
       success: true,

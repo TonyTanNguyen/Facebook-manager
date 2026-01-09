@@ -239,7 +239,7 @@ const CommentCard = ({ comment, onReply, onLike, onHide, onDelete }) => {
   );
 };
 
-const CommentsFeed = ({ selectedPageId }) => {
+const CommentsFeed = ({ selectedPageId, dateRange }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -259,6 +259,12 @@ const CommentsFeed = ({ selectedPageId }) => {
       if (selectedPageId) {
         params.pageId = selectedPageId;
       }
+      if (dateRange?.startDate) {
+        params.startDate = dateRange.startDate;
+      }
+      if (dateRange?.endDate) {
+        params.endDate = dateRange.endDate;
+      }
 
       const response = await commentsAPI.getComments(params);
       setComments(response.data || []);
@@ -268,7 +274,7 @@ const CommentsFeed = ({ selectedPageId }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedPageId]);
+  }, [selectedPageId, dateRange]);
 
   useEffect(() => {
     loadComments();

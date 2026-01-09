@@ -272,7 +272,7 @@ const ConversationDetail = ({
 };
 
 // Main Messages Feed Component
-const MessagesFeed = ({ selectedPageId }) => {
+const MessagesFeed = ({ selectedPageId, dateRange }) => {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -294,6 +294,12 @@ const MessagesFeed = ({ selectedPageId }) => {
         if (selectedPageId) {
           params.pageId = selectedPageId;
         }
+        if (dateRange?.startDate) {
+          params.startDate = dateRange.startDate;
+        }
+        if (dateRange?.endDate) {
+          params.endDate = dateRange.endDate;
+        }
 
         const response = await messagesAPI.getConversations(params);
         setConversations(response.data || []);
@@ -304,7 +310,7 @@ const MessagesFeed = ({ selectedPageId }) => {
         setRefreshing(false);
       }
     },
-    [selectedPageId]
+    [selectedPageId, dateRange]
   );
 
   useEffect(() => {
