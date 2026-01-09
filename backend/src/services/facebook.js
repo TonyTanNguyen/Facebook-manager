@@ -74,7 +74,7 @@ export const getPageDetails = async (pageId, pageAccessToken) => {
 };
 
 /**
- * Get posts from a page
+ * Get posts from a page (organic posts)
  */
 export const getPagePosts = async (pageId, pageAccessToken, limit = 25) => {
   const data = await graphRequest(`/${pageId}/posts`, pageAccessToken, {
@@ -86,6 +86,90 @@ export const getPagePosts = async (pageId, pageAccessToken, limit = 25) => {
   });
 
   return data.data || [];
+};
+
+/**
+ * Get ad posts from a page (via feed which includes promoted content)
+ */
+export const getPageFeed = async (pageId, pageAccessToken, limit = 25) => {
+  const data = await graphRequest(`/${pageId}/feed`, pageAccessToken, {
+    params: {
+      fields:
+        "id,message,created_time,full_picture,permalink_url,shares,likes.summary(true),comments.summary(true),is_published,is_hidden,promotable_id",
+      limit,
+    },
+  });
+
+  return data.data || [];
+};
+
+/**
+ * Get ads from an ad account
+ */
+export const getAdAccountAds = async (adAccountId, accessToken, limit = 50) => {
+  try {
+    const data = await graphRequest(`/act_${adAccountId}/ads`, accessToken, {
+      params: {
+        fields: "id,name,status,effective_object_story_id,creative{object_story_id,effective_object_story_id}",
+        limit,
+      },
+    });
+    return data.data || [];
+  } catch (error) {
+    console.error(`Error fetching ads from account ${adAccountId}:`, error.message);
+    return [];
+  }
+};
+
+/**
+ * Get ad accounts from Business Manager
+ */
+export const getBusinessAdAccounts = async (businessId, accessToken) => {
+  try {
+    const data = await graphRequest(`/${businessId}/owned_ad_accounts`, accessToken, {
+      params: {
+        fields: "id,name,account_id,account_status",
+        limit: 100,
+      },
+    });
+    return data.data || [];
+  } catch (error) {
+    console.error(`Error fetching ad accounts:`, error.message);
+    return [];
+  }
+};
+
+/**
+ * Get ad post IDs from Business Manager's ad accounts
+ */
+export const getAdPostIds = async (businessId, accessToken) => {
+  const adPostIds = new Set();
+
+  try {
+    // Get ad accounts
+    const adAccounts = await getBusinessAdAccounts(businessId, accessToken);
+    console.log(`Found ${adAccounts.length} ad accounts`);
+
+    // Get ads from each account
+    for (const account of adAccounts) {
+      const accountId = account.account_id || account.id.replace('act_', '');
+      const ads = await getAdAccountAds(accountId, accessToken, 100);
+
+      for (const ad of ads) {
+        // Get the post ID from the ad creative
+        const postId = ad.effective_object_story_id ||
+                       ad.creative?.effective_object_story_id ||
+                       ad.creative?.object_story_id;
+        if (postId) {
+          adPostIds.add(postId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching ad post IDs:', error.message);
+  }
+
+  return Array.from(adPostIds);
 };
 
 /**
@@ -105,21 +189,37 @@ export const getPostComments = async (postId, pageAccessToken, limit = 50) => {
 };
 
 /**
- * Get all comments from multiple pages (aggregated)
+ * Get all comments from multiple pages (aggregated) - includes ad posts
  */
-export const getCommentsFromPages = async (pages, limit = 50) => {
+export const getCommentsFromPages = async (pages, limit = 50, options = {}) => {
   const allComments = [];
+  const processedPostIds = new Set();
+  const { businessId, systemUserToken } = options;
+
+  // First, get ad post IDs if we have business manager access
+  let adPostIds = [];
+  if (businessId && systemUserToken) {
+    try {
+      adPostIds = await getAdPostIds(businessId, systemUserToken);
+      console.log(`Found ${adPostIds.length} ad posts to check for comments`);
+    } catch (error) {
+      console.error('Error fetching ad posts:', error.message);
+    }
+  }
 
   for (const page of pages) {
     try {
-      // Get recent posts from the page
-      const posts = await getPagePosts(
+      // Use feed instead of posts to get more content including promoted posts
+      const posts = await getPageFeed(
         page.facebookPageId,
         page.pageAccessToken,
-        10
+        15
       );
 
       for (const post of posts) {
+        if (processedPostIds.has(post.id)) continue;
+        processedPostIds.add(post.id);
+
         // Get comments for each post
         const comments = await getPostComments(
           post.id,
@@ -141,10 +241,55 @@ export const getCommentsFromPages = async (pages, limit = 50) => {
             picture: post.full_picture,
             permalink: post.permalink_url,
             created_time: post.created_time,
+            isAd: !!post.promotable_id,
           },
         }));
 
         allComments.push(...enrichedComments);
+      }
+
+      // Also fetch comments from ad posts that belong to this page
+      const pageAdPosts = adPostIds.filter(id => id.startsWith(page.facebookPageId + '_'));
+      for (const adPostId of pageAdPosts) {
+        if (processedPostIds.has(adPostId)) continue;
+        processedPostIds.add(adPostId);
+
+        try {
+          // Get post details
+          const postData = await graphRequest(`/${adPostId}`, page.pageAccessToken, {
+            params: {
+              fields: "id,message,created_time,full_picture,permalink_url",
+            },
+          });
+
+          // Get comments for ad post
+          const comments = await getPostComments(
+            adPostId,
+            page.pageAccessToken,
+            limit
+          );
+
+          const enrichedComments = comments.map((comment) => ({
+            ...comment,
+            page: {
+              id: page.facebookPageId,
+              name: page.name,
+              picture: page.picture,
+            },
+            post: {
+              id: adPostId,
+              message: postData.message,
+              picture: postData.full_picture,
+              permalink: postData.permalink_url,
+              created_time: postData.created_time,
+              isAd: true,
+            },
+          }));
+
+          allComments.push(...enrichedComments);
+        } catch (error) {
+          console.error(`Error fetching ad post ${adPostId}:`, error.message);
+        }
       }
     } catch (error) {
       console.error(
@@ -450,6 +595,7 @@ export default {
   getUserPages,
   getPageDetails,
   getPagePosts,
+  getPageFeed,
   getPostComments,
   getCommentsFromPages,
   replyToComment,
@@ -469,4 +615,8 @@ export default {
   getBusinessOwnedPages,
   getBusinessClientPages,
   getAllBusinessPages,
+  // Ad functions
+  getBusinessAdAccounts,
+  getAdAccountAds,
+  getAdPostIds,
 };

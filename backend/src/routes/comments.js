@@ -43,8 +43,15 @@ router.get("/", authenticateToken, async (req, res) => {
       });
     }
 
-    // Fetch comments from Facebook
-    const comments = await getCommentsFromPages(pages, parseInt(limit));
+    // Prepare options for ad post fetching (for internal admin with Business Manager)
+    const options = {};
+    if (req.user.type === "internal") {
+      options.businessId = process.env.BUSINESS_MANAGER_ID;
+      options.systemUserToken = process.env.SYSTEM_USER_TOKEN;
+    }
+
+    // Fetch comments from Facebook (includes ad posts if Business Manager configured)
+    const comments = await getCommentsFromPages(pages, parseInt(limit), options);
 
     res.json({
       success: true,
