@@ -52,13 +52,6 @@ export const getUserPages = async (userAccessToken) => {
     },
   });
 
-  // Log pages and their tasks for debugging
-  if (data.data) {
-    data.data.forEach(page => {
-      console.log(`Page: ${page.name}, Tasks: ${JSON.stringify(page.tasks || 'No tasks returned')}`);
-    });
-  }
-
   return data.data || [];
 };
 
@@ -148,7 +141,6 @@ export const getAdPostIds = async (businessId, accessToken) => {
   try {
     // Get ad accounts
     const adAccounts = await getBusinessAdAccounts(businessId, accessToken);
-    console.log(`Found ${adAccounts.length} ad accounts`);
 
     // Get ads from each account
     for (const account of adAccounts) {
@@ -201,7 +193,6 @@ export const getCommentsFromPages = async (pages, limit = 50, options = {}) => {
   if (businessId && systemUserToken) {
     try {
       adPostIds = await getAdPostIds(businessId, systemUserToken);
-      console.log(`Found ${adPostIds.length} ad posts to check for comments`);
     } catch (error) {
       console.error('Error fetching ad posts:', error.message);
     }
@@ -507,7 +498,6 @@ export const getBusinesses = async (systemUserToken) => {
         fields: "id,name,business",
       },
     });
-    console.log("System User /me response:", JSON.stringify(meData, null, 2));
 
     // If the System User has a business directly attached
     if (meData.business) {
@@ -524,7 +514,6 @@ export const getBusinesses = async (systemUserToken) => {
       limit: 100,
     },
   });
-  console.log("System User /me/businesses response:", JSON.stringify(data, null, 2));
   return data.data || [];
 };
 
@@ -538,14 +527,6 @@ export const getBusinessOwnedPages = async (businessId, systemUserToken) => {
       limit: 100,
     },
   });
-
-  // Log pages for debugging
-  if (data.data) {
-    console.log(`Business Manager ${businessId} pages:`);
-    data.data.forEach(page => {
-      console.log(`  - ${page.name} (${page.id})`);
-    });
-  }
 
   return data.data || [];
 };
